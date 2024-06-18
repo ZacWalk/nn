@@ -1,11 +1,11 @@
 # nn
 A simple multilevel perceptron that can train and run on the fashion mnist dataset.
 
-I wanted to experiment with the accuracy when using 8-bit log weights. Currently only as far as implementing with floats.
+I wanted to experiment with the accuracy when using 8-bit log weights. Currently only mplementing with floats.
 
-Generates the current output:
+Current output:
 
-'''
+```
 Neural Network Summary:         [f := Sigmoid]
 
 Layer 1  784 neurons
@@ -27,4 +27,4 @@ Layer 4   10 neurons
 [EVALUATION] [LOSS 0.09102] [ACCURACY   8736 out of 10000]
 
 Time taken: 15 seconds
-'''
+```
