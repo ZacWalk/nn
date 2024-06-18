@@ -1,5 +1,5 @@
 # nn
-A simple multilevel perceptron that can train and run on the fashion mnist dataset.
+A simple multilevel perceptron that can train and run on the fashion mnist dataset. Implemented in C++ with no dependencies.
 
 I wanted to experiment with the accuracy when using 8-bit log weights. Currently only mplementing with floats.
 
