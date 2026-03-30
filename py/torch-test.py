@@ -1,3 +1,5 @@
+# PyTorch Fashion-MNIST baseline used to compare the C++ MLP against a reference implementation.
+
 import torch
 import torch.nn as nn
 import torch.optim as optim

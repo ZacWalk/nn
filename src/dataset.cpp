@@ -1,80 +1,59 @@
 
+// Dataset storage helpers for reserving, appending, and discarding parsed samples.
+
 #include "dataset.h"
 
-#include <cstddef>
-#include <cstdio>
-#include <cstring>
-#include <fstream>
-#include <iostream>
-#include <string>
+#include <algorithm>
+#include <stdexcept>
 
-
-void dataset::read_csv(const char* filename, int dataset_flag, xfloat x_max)
+void dataset::reset(const int input_dimensions, const std::size_t sample_capacity)
 {
-	std::ifstream stream(filename);
-	constexpr char delimiter[] = ",";
-	size_t len = 0;
-
-	if (!stream.is_open()) {
-		std::cerr << "Error: Unable to open file " << filename << std::endl;
-		return;
-	}
-
-	int columns = 0;
-	std::cout << "Loading " << filename << std::endl;
-
-	std::string line;
-
-	if (std::getline(stream, line))
+	if (input_dimensions <= 0)
 	{
-		char* xline = (char*)line.c_str();
-		char* token = strtok(xline, delimiter);
-
-		while (token != nullptr)
-		{
-			token = strtok(nullptr, delimiter);
-			columns += 1;
-		}
+		throw std::invalid_argument("Dataset dimensions must be positive");
 	}
 
-	dimensions = columns - 1;
-
-	while (std::getline(stream, line))
+	dimensions = input_dimensions;
+	sample_count = 0;
+	X.clear();
+	Y.clear();
+	if (sample_capacity > 0)
 	{
-		char* xline = (char*)line.c_str();
-		char* token = strtok(xline, delimiter);
-
-		columns = 0;
-		
-		auto xx = new xfloat[dimensions];
-		auto yy = new xfloat[classes];
-
-		const auto label_val = std::stoi(token);
-
-		for (int y_idx = 0; y_idx < classes; y_idx += 1)
-		{
-			if (y_idx == label_val)
-			{
-				yy[y_idx] = 1.0;
-			}
-			else
-			{
-				yy[y_idx] = 0.0;
-			}
-		}
-
-		while (token != nullptr)
-		{
-			token = strtok(nullptr, delimiter);
-			if (token != nullptr)
-			{
-				const auto pixel = std::stoi(token);
-				xx[columns] = (pixel + 0.0) / x_max;
-				columns += 1;
-			}
-		}
-
-		X.emplace_back(xx);
-		Y.emplace_back(yy);
+		X.reserve(sample_capacity * static_cast<std::size_t>(dimensions));
+		Y.reserve(sample_capacity * static_cast<std::size_t>(classes));
 	}
+}
+
+xfloat* dataset::append_sample(const int label)
+{
+	if (dimensions <= 0)
+	{
+		throw std::logic_error("Dataset must be reset before appending samples");
+	}
+
+	if (label < 0 || label >= classes)
+	{
+		throw std::out_of_range("Sample label is out of range");
+	}
+
+	const std::size_t x_base = X.size();
+	const std::size_t y_base = Y.size();
+	X.resize(x_base + static_cast<std::size_t>(dimensions));
+	Y.resize(y_base + static_cast<std::size_t>(classes), 0.0f);
+	Y[y_base + static_cast<std::size_t>(label)] = 1.0f;
+	std::fill(X.begin() + static_cast<std::ptrdiff_t>(x_base), X.end(), 0.0f);
+	sample_count += 1;
+	return X.data() + x_base;
+}
+
+void dataset::discard_last_sample(void)
+{
+	if (sample_count == 0)
+	{
+		throw std::logic_error("No samples are available to discard");
+	}
+
+	X.resize(X.size() - static_cast<std::size_t>(dimensions));
+	Y.resize(Y.size() - static_cast<std::size_t>(classes));
+	sample_count -= 1;
 }

@@ -1,30 +1,95 @@
 # nn
-A simple multilevel perceptron that can train and run on the fashion mnist dataset. Implemented in C++ with no dependencies.
 
-Currently only implemented with floats but I plan to experiment with the accuracy of using 8-bit log weights. Interestingly the C++ version seems to outperform my pytorch experiments. That might just be because I am not very familiar with pytorch.
+A small, dependency-free Fashion-MNIST classifier in C++.
 
-Current output:
+The current codebase uses a multilayer perceptron with a split design:
 
+- `nn`: model structure and inference/training step logic
+- `trainer`: epoch orchestration and metric aggregation
+- `dataset_pipeline`: CSV loading and dataset validation
+- Mini-batch SGD with momentum
+
+The Release x64 build also uses AVX2 intrinsics in the dense-layer hot paths.
+
+## Current default
+
+Default runtime configuration:
+
+- Topology: `784 -> 100 -> 50 -> 10`
+- Hidden activation: `sigmoid`
+- Output activation: `softmax`
+- Learning rate: `0.04`
+- Momentum: `0.9`
+- Batch size: `16`
+- Epochs: `10`
+- Initialization: scaled Xavier-style initialization
+
+On this machine, the current default configuration reached approximately:
+
+- Training accuracy: `53961 / 60000`
+- Evaluation accuracy: `8834 / 10000`
+- Total runtime: about `13 seconds`
+
+## Fashion-MNIST expectations
+
+For a simple fully connected network, Fashion-MNIST test accuracy is usually in the high-80% range.
+
+Practical expectations are roughly:
+
+- Simple MLP: about `87%` to `89%`
+- Better-tuned dense models: sometimes around `89%+`
+- CNNs: typically low-90% and above
+
+So the current result is reasonable for a small no-dependency MLP. If the goal is clearly above 90%, the architecture usually needs to move beyond a plain dense network.
+
+## Tuning without recompiling
+
+The binary supports runtime hyperparameter overrides via environment variables:
+
+- `NN_HIDDEN1`
+- `NN_HIDDEN2`
+- `NN_LR`
+- `NN_MOMENTUM`
+- `NN_BATCH_SIZE`
+- `NN_EPOCHS`
+
+Example PowerShell usage:
+
+```powershell
+$env:NN_LR = '0.04'
+$env:NN_MOMENTUM = '0.9'
+$env:NN_BATCH_SIZE = '16'
+.\bin\nn.exe
 ```
-Neural Network Summary:         [f := Sigmoid]
 
-Layer 1  784 neurons
-Layer 2  100 neurons
-Layer 3   50 neurons
-Layer 4   10 neurons
+```powershell
+$env:NN_HIDDEN1 = '120'
+$env:NN_HIDDEN2 = '60'
+$env:NN_LR = '0.04'
+$env:NN_MOMENTUM = '0.9'
+$env:NN_BATCH_SIZE = '16'
+.\bin\nn.exe
+```
 
-[EPOCH    1] [LOSS 0.14729] [ACCURACY  47787 out of 60000]
-[EPOCH    2] [LOSS 0.11223] [ACCURACY  50813 out of 60000]
-[EPOCH    3] [LOSS 0.10208] [ACCURACY  51744 out of 60000]
-[EPOCH    4] [LOSS 0.09830] [ACCURACY  51982 out of 60000]
-[EPOCH    5] [LOSS 0.09405] [ACCURACY  52323 out of 60000]
-[EPOCH    6] [LOSS 0.09002] [ACCURACY  52710 out of 60000]
-[EPOCH    7] [LOSS 0.08490] [ACCURACY  53088 out of 60000]
-[EPOCH    8] [LOSS 0.08296] [ACCURACY  53326 out of 60000]
-[EPOCH    9] [LOSS 0.08291] [ACCURACY  53331 out of 60000]
-[EPOCH   10] [LOSS 0.08029] [ACCURACY  53493 out of 60000]
+One wider model that improved accuracy during tuning was:
 
-[EVALUATION] [LOSS 0.09102] [ACCURACY   8736 out of 10000]
+- Hidden widths: `120`, `60`
+- Learning rate: `0.04`
+- Evaluation accuracy: about `8856 / 10000`
+- Runtime: about `17 seconds`
 
-Time taken: 15 seconds
+That is a reasonable optional tradeoff, but the default remains tuned for the original runtime target.
+
+## Build and run
+
+Build Release x64 with MSBuild:
+
+```powershell
+& 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\amd64\MSBuild.exe' .\nn.sln /p:Configuration=Release /p:Platform=x64
+```
+
+Run from the workspace root so the dataset paths resolve:
+
+```powershell
+.\bin\nn.exe
 ```

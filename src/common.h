@@ -1,27 +1,14 @@
 
-/**
- * common.hpp
- *
- * In this header file, we define the constants
- * used throughout the project. We also
- * include all the header files necessary to
- * make the implementation work.
- */
+// Shared scalar aliases and project-wide constants for the Fashion-MNIST training pipeline.
 
 #pragma once
+#include <cstddef>
 #include <cstdint>
 
-
-typedef intptr_t ssize_t;
-typedef float xfloat;
+using xfloat = float;
 
 constexpr int EPOCHS = 10;
 constexpr int MNIST_CLASSES = 10;
-constexpr xfloat LEARNING_RATE = 0.1;
-constexpr xfloat EXP = 2.718282;
-constexpr xfloat MNIST_MAX_VAL = 255.0;
-
-
-constexpr int MNIST_TRAIN = 60000;
-constexpr int MNIST_TEST = 10000;
+constexpr xfloat LEARNING_RATE = 0.1f;
+constexpr xfloat MNIST_MAX_VAL = 255.0f;
 

@@ -1,32 +1,91 @@
 
+// Entry point that loads Fashion-MNIST CSV data, configures the MLP, and runs training plus evaluation.
+
+#include <ctime>
+#include <cstdlib>
+#include <exception>
 #include <iostream>
-#include <vector>
 
 #include "nn.h"
-#include "dataset.h"
+#include "pipeline.h"
+#include "trainer.h"
 
 constexpr char training_data_file[] = ".\\data\\fashion-mnist_train.csv";
 constexpr char evaluation_data_file[] = ".\\data\\fashion-mnist_test.csv";
 
+namespace
+{
+int read_env_int(const char* name, const int fallback)
+{
+    if (const char* value = std::getenv(name))
+    {
+        char* end = nullptr;
+        const long parsed = std::strtol(value, &end, 10);
+        if (end != value && *end == '\0')
+        {
+            return static_cast<int>(parsed);
+        }
+    }
+
+    return fallback;
+}
+
+xfloat read_env_float(const char* name, const xfloat fallback)
+{
+    if (const char* value = std::getenv(name))
+    {
+        char* end = nullptr;
+        const float parsed = std::strtof(value, &end);
+        if (end != value && *end == '\0')
+        {
+            return parsed;
+        }
+    }
+
+    return fallback;
+}
+}
+
 int main(int argc, char* argv[])
 {   
-    dataset TRAIN(MNIST_CLASSES);
-    dataset TEST(MNIST_CLASSES);
     const auto start = time(nullptr);
+    dataset_pipeline pipeline(MNIST_CLASSES);
+    const int hidden1 = read_env_int("NN_HIDDEN1", 100);
+    const int hidden2 = read_env_int("NN_HIDDEN2", 50);
+    const int epochs = read_env_int("NN_EPOCHS", 10);
+    const int batch_size = read_env_int("NN_BATCH_SIZE", 16);
+    const xfloat learning_rate = read_env_float("NN_LR", 0.04f);
+    const xfloat momentum = read_env_float("NN_MOMENTUM", 0.9f);
+    const trainer_config training_config{ epochs, batch_size };
+    trainer model_trainer(training_config);
 
-    TRAIN.read_csv(training_data_file, 0, MNIST_MAX_VAL);
-    TEST.read_csv(evaluation_data_file, 1, MNIST_MAX_VAL);
+    if (!pipeline.load({ training_data_file, evaluation_data_file, MNIST_MAX_VAL, true }))
+    {
+        return 1;
+    }
 
-    std::vector<int> vec{ TRAIN.dimensions, 100, 50, 10 }; // 8778 out of 10000 (30 sec)
-    //std::vector<int> vec{ TRAIN.dimensions, 150, 50, 10 }; // 8721 out of 10000 (42 sec)
-    // std::vector<int> vec{ TRAIN.dimensions, 200, 100, 50, 10 }; // 8733 out of 10000 (126 sec)
-    // std::vector<int> vec { TRAIN.dimensions, 200, 10 }; // 8665 out of 10000 (47 sec)
+    const nn_config model_config{
+        { pipeline.input_dimensions(), hidden1, hidden2, MNIST_CLASSES },
+        learning_rate,
+        momentum,
+        true,
+        -1.0f,
+        1.0f,
+    };
 
-    nn fcn;
-    fcn.compile(vec, -1.0, 1.0);
-    fcn.summary();
-    fcn.fit(TRAIN);
-    fcn.evaluate(TEST);
+    try
+    {
+        nn fcn;
+        fcn.compile(model_config);
+        fcn.summary();
+        model_trainer.fit(fcn, pipeline.training_data());
+        model_trainer.evaluate(fcn, pipeline.evaluation_data());
+    }
+    catch (const std::exception& ex)
+    {
+        std::cerr << "Network initialization failed: " << ex.what() << std::endl;
+        return 1;
+    }
 
     const auto end = time(nullptr);
     std::cout << "\n\nTime taken: " << end - start << " seconds\n";
